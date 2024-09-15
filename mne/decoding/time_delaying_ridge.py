@@ -1,7 +1,6 @@
 """TimeDelayingRidge class."""
-# Authors: Eric Larson <larson.eric.d@gmail.com>
-#          Ross Maddox <ross.maddox@rochester.edu>
-#
+
+# Authors: The MNE-Python contributors.
 # License: BSD-3-Clause
 # Copyright the MNE-Python contributors.
 
@@ -298,9 +297,6 @@ class TimeDelayingRidge(BaseEstimator):
         self.fit_intercept = fit_intercept
         self.edge_correction = edge_correction
         self.n_jobs = n_jobs
-
-    def _more_tags(self):
-        return {"no_validation": True}
 
     @property
     def _smin(self):
