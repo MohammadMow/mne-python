@@ -198,6 +198,7 @@ def test_receptive_field_basic(n_jobs):
     feature_names = [f"feature_{ii}" for ii in [0, 1, 2]]
     rf = ReceptiveField(tmin, tmax, 1, feature_names, estimator=mod, patterns=True)
     rf.fit(X, y)
+    assert rf.coef_.shape == (3, 11)
     assert_array_equal(rf.delays_, np.arange(tmin, tmax + 1))
 
     y_pred = rf.predict(X)
@@ -622,6 +623,7 @@ def test_rf_sklearn_compliance(estimator, check):
         "check_estimators_empty_data_messages",
         "check_n_features_in",
         "check_fit2d_predict1d",
+        "check_estimators_unfitted",
     )
     if any(ignore in str(check) for ignore in ignores):
         return

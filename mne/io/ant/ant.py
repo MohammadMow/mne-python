@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-units = {"uv": 1e-6}
+_UNITS: dict[str, float] = {"uv": 1e-6, "µv": 1e-6}
 
 
 @fill_doc
@@ -83,8 +83,6 @@ class RawANT(BaseRaw):
     %(preload)s
     %(verbose)s
     """
-
-    _extra_attributes = ("impedances",)
 
     @verbose
     def __init__(
@@ -145,8 +143,12 @@ class RawANT(BaseRaw):
         info["device_info"] = dict(type=make, model=model, serial=serial, site=site)
         his_id, name, sex, birthday = read_subject_info(cnt)
         info["subject_info"] = dict(
-            his_id=his_id, first_name=name, sex=sex, birthday=birthday
+            his_id=his_id,
+            first_name=name,
+            sex=sex,
         )
+        if birthday is not None:
+            info["subject_info"]["birthday"] = birthday
         if bipolars is not None:
             with info._unlock():
                 for idx in bipolars_idx:
@@ -169,7 +171,7 @@ class RawANT(BaseRaw):
             raw_extras=[raw_extras],
         )
         # look for annotations (called trigger by ant)
-        onsets, durations, descriptions, impedances, disconnect = read_triggers(cnt)
+        onsets, durations, descriptions, _, disconnect = read_triggers(cnt)
         onsets, durations, descriptions = _prepare_annotations(
             onsets, durations, descriptions, disconnect, impedance_annotation
         )
@@ -177,15 +179,6 @@ class RawANT(BaseRaw):
         durations = np.array(durations) / self.info["sfreq"]
         annotations = Annotations(onsets, duration=durations, description=descriptions)
         self.set_annotations(annotations)
-        # set impedance similarly as for brainvision files
-        self._impedances = [
-            {ch: imp[k] for k, ch in enumerate(ch_names)} for imp in impedances
-        ]
-
-    @property
-    def impedances(self) -> list[dict[str, float]]:
-        """List of impedance measurements."""
-        return self._impedances
 
     def _read_segment_file(self, data, idx, fi, start, stop, cals, mult):
         from antio import read_cnt
@@ -305,8 +298,8 @@ def _scale_data(data: NDArray[np.float64], ch_units: list[str]) -> None:
     for idx, unit in enumerate(ch_units):
         units_index[unit].append(idx)
     for unit, value in units_index.items():
-        if unit in units:
-            data[np.array(value, dtype=np.int16), :] *= units[unit]
+        if unit in _UNITS:
+            data[np.array(value, dtype=np.int16), :] *= _UNITS[unit]
         else:
             warn(
                 f"Unit {unit} not recognized, not scaling. Please report the unit on "
@@ -331,7 +324,6 @@ def read_raw_ant(
     raw : instance of RawANT
         A Raw object containing ANT data.
         See :class:`mne.io.Raw` for documentation of attributes and methods.
-        The impedance measurements are stored in the extra attribute ``raw.impedances``.
     """
     return RawANT(
         fname,
